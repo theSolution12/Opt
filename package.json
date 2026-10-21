@@ -8,6 +8,9 @@
     "build": "tsc --outDir dist",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
+    "test:k6": "k6 run test/users.k6.js",
+    "test:k6:smoke": "k6 run --vus 1 --iterations 1 test/users.k6.js",
+    "test:k6:load": "k6 run --vus 1000 --duration 30s test/users.k6.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
