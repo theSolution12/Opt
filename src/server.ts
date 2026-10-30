@@ -1,11 +1,14 @@
 import e from "express";
 import userRoutes from "./routes/user.route";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
+import { requestLifecycle } from "./middlewares/requestLifecycle.middleware";
 
 const app = e();
 const PORT = 8000;
 
 app.use(e.json());
+app.use(e.urlencoded({ extended: true }));
+app.use(requestLifecycle);
 
 app.use("/api/users", userRoutes);
 
