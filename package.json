@@ -14,7 +14,12 @@
     "test:k6:breakpoint": "dotenv -e .env -- k6 run test/users.breakpoint.k6.js",
     "test:k6:breakpoint:small": "dotenv -e .env -- k6 run -e SEED_COUNT=1000 -e READ_PEAK=300 -e WRITE_PEAK=30 test/users.breakpoint.k6.js",
     "test:k6:breakpoint:large": "dotenv -e .env -- k6 run -e SEED_COUNT=100000 -e READ_PEAK=2000 -e WRITE_PEAK=200 test/users.breakpoint.k6.js",
-    "test:k6:breakpoint:save": "mkdir -p results && dotenv -e .env -- k6 run --summary-export=results/run-$(date +%Y%m%d-%H%M%S).json test/users.breakpoint.k6.js",
+    "plot": "tsx scripts/plot-k6.ts",
+    "test:k6:plot": "mkdir -p reports; dotenv -e .env -- k6 run --out csv=reports/users.csv test/users.k6.js; tsx scripts/plot-k6.ts reports/users.csv",
+    "test:k6:load:plot": "mkdir -p reports; dotenv -e .env -- k6 run --out csv=reports/load.csv --vus 1000 --duration 30s test/users.k6.js; tsx scripts/plot-k6.ts reports/load.csv",
+    "test:k6:breakpoint:plot": "mkdir -p reports; dotenv -e .env -- k6 run --out csv=reports/breakpoint.csv test/users.breakpoint.k6.js; tsx scripts/plot-k6.ts reports/breakpoint.csv",
+    "test:k6:breakpoint:small:plot": "mkdir -p reports; dotenv -e .env -- k6 run --out csv=reports/breakpoint-small.csv -e SEED_COUNT=1000 -e READ_PEAK=300 -e WRITE_PEAK=30 test/users.breakpoint.k6.js; tsx scripts/plot-k6.ts reports/breakpoint-small.csv",
+    "test:k6:breakpoint:large:plot": "mkdir -p reports; dotenv -e .env -- k6 run --out csv=reports/breakpoint-large.csv -e SEED_COUNT=100000 -e READ_PEAK=2000 -e WRITE_PEAK=200 test/users.breakpoint.k6.js; tsx scripts/plot-k6.ts reports/breakpoint-large.csv",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

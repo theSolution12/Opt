@@ -2,7 +2,7 @@ import http from "k6/http";
 import { check } from "k6";
 
 const BASE_URL = __ENV.BASE_URL;
-const baseUrl = BASE_URL || "http://localhost:8000";
+const baseUrl = "http://localhost:8000";
 
 // Tunables (override with -e NAME=value)
 const SEED_COUNT = Number(__ENV.SEED_COUNT || 10000); // users created before the test
@@ -25,6 +25,7 @@ function stages(peak) {
 
 export const options = {
   setupTimeout: "600s",
+  teardownTimeout: "600s",
   scenarios: {
     reads: {
       executor: "ramping-arrival-rate",
@@ -133,4 +134,34 @@ export function writeFlow() {
     "delete returns 200": (r) => r.status === 200,
     "delete succeeds": (r) => r.status === 200 && r.json("success") === true,
   });
+}
+
+// Runs once after the test (including when a threshold aborts it).
+// Deletes every user so the next run starts from an empty store.
+export function teardown() {
+  const listRes = http.get(`${baseUrl}/api/users`, { timeout: "120s" });
+  if (listRes.status !== 200) {
+    console.warn(`Teardown could not list users (status ${listRes.status})`);
+    return;
+  }
+
+  const ids = listRes.json("users").map((u) => u.id);
+  const BATCH = 100;
+  let deleted = 0;
+
+  for (let i = 0; i < ids.length; i += BATCH) {
+    const responses = http.batch(
+      ids
+        .slice(i, i + BATCH)
+        .map((id) => [
+          "DELETE",
+          `${baseUrl}/api/users/${id}`,
+          null,
+          { timeout: "120s" },
+        ]),
+    );
+    deleted += responses.filter((r) => r.status === 200).length;
+  }
+
+  console.log(`Teardown removed ${deleted}/${ids.length} users`);
 }
