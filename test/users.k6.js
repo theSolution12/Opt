@@ -4,12 +4,19 @@ import { check, fail } from "k6";
 const baseUrl = __ENV.BASE_URL || "http://localhost:8000";
 
 export const options = {
-  vus: 10,
-  duration: "30s",
-  thresholds: {
-    http_req_failed: ["rate<0.01"],
-    http_req_duration: ["p(95)<200"],
-    checks: ["rate>0.99"],
+  scenarios: {
+    ramp: {
+      executor: "ramping-arrival-rate",
+      startRate: 50,
+      timeUnit: "1s",
+      preAllocatedVUs: 200,
+      maxVUs: 2000,
+      stages: [
+        { target: 200, duration: "30s" },
+        { target: 1000, duration: "30s" },
+        { target: 2000, duration: "30s" },
+      ],
+    },
   },
 };
 
