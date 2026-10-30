@@ -10,7 +10,8 @@ export const errorHandler = (
     timestamp: new Date().toISOString(),
     method: req.method,
     path: req.originalUrl,
-    error: err.message,
+    status: err.status || err.statusCode || 500,
+    message: err.message,
     stack: err.stack,
   });
 
@@ -18,8 +19,9 @@ export const errorHandler = (
     return next(err);
   }
 
-  res.status(err.status || err.statusCode || 500).json({
-    error:
-      err.status && err.status < 500 ? err.message : "Internal server error",
+  const status = err.status || err.statusCode || 500;
+
+  res.status(status).json({
+    error: status >= 500 ? "Internal server error" : err.message,
   });
 };
