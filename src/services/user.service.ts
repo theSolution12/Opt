@@ -40,8 +40,10 @@ export const addUser = (payload: AddUserPayload) => {
 };
 
 export const removeUser = (id: number) => {
-  const newUsers = users.filter((user) => user.id != id);
-  users = newUsers;
+  const newUsers = users.splice(
+    users.findIndex((user) => user.id == id),
+    1,
+  );
 
   return {
     success: true,
