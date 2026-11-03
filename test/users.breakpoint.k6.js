@@ -10,6 +10,8 @@ const READ_PEAK = Number(__ENV.READ_PEAK || 900); // list requests/sec at the 10
 const WRITE_PEAK = Number(__ENV.WRITE_PEAK || 100); // create+update+delete flows/sec at 100%
 const MAX_VUS = Number(__ENV.MAX_VUS || 3000);
 
+const PAGE_SIZE = Math.min(99, Math.max(1, Number(__ENV.PAGE_SIZE || 100))); // max users returned by list
+
 const jsonParams = { headers: { "Content-Type": "application/json" } };
 
 // 25% -> 50% -> 100% -> 200% of peak, 30s each.
@@ -52,12 +54,12 @@ export const options = {
     "http_req_duration{scenario:reads}": ["p(95)<200"],
     "http_req_duration{scenario:writes}": ["p(95)<200"],
     // Abort the test if the 95th percentile of request duration exceeds 200ms for either scenario.
-    "http_req_duration{scenario:reads}": [
-      { threshold: "p(95)<200", abortOnFail: true, delayAbortEval: "10s" },
-    ],
-    "http_req_duration{scenario:writes}": [
-      { threshold: "p(95)<200", abortOnFail: true, delayAbortEval: "10s" },
-    ],
+    // "http_req_duration{scenario:reads}": [
+    //   { threshold: "p(95)<200", abortOnFail: true, delayAbortEval: "10s" },
+    // ],
+    // "http_req_duration{scenario:writes}": [
+    //   { threshold: "p(95)<200", abortOnFail: true, delayAbortEval: "10s" },
+    // ],
     // Non-zero means k6 couldn't keep up with the target rate (server saturated)
     dropped_iterations: ["count==0"],
   },
@@ -94,7 +96,13 @@ export function setup() {
 // Read-heavy traffic: list only checks status (body parsing is skipped so
 // k6 itself doesn't become the bottleneck).
 export function readFlow() {
-  const res = http.get(`${baseUrl}/api/users`, { responseType: "none" });
+  const pageCount = Math.max(1, Math.ceil(SEED_COUNT / PAGE_SIZE));
+  const index = __ITER % pageCount;
+
+  const res = http.get(
+    `${baseUrl}/api/users?index=${index}&pageSize=${PAGE_SIZE}`,
+    { responseType: "none" },
+  );
   check(res, { "list returns 200": (r) => r.status === 200 });
 }
 
@@ -139,19 +147,34 @@ export function writeFlow() {
 // Runs once after the test (including when a threshold aborts it).
 // Deletes every user so the next run starts from an empty store.
 export function teardown() {
-  const listRes = http.get(`${baseUrl}/api/users`, { timeout: "120s" });
-  if (listRes.status !== 200) {
-    console.warn(`Teardown could not list users (status ${listRes.status})`);
-    return;
+  const ids = new Set();
+  let index = 0;
+
+  while (true) {
+    const listRes = http.get(
+      `${baseUrl}/api/users?index=${index}&pageSize=${PAGE_SIZE}`,
+      { timeout: "120s" },
+    );
+
+    if (listRes.status !== 200) {
+      console.warn(`Teardown could not list users (status ${listRes.status})`);
+      return;
+    }
+
+    const page = listRes.json("users") || [];
+    page.forEach((user) => ids.add(user.id));
+
+    if (page.length < PAGE_SIZE) break;
+    index++;
   }
 
-  const ids = listRes.json("users").map((u) => u.id);
+  const userIds = [...ids];
   const BATCH = 100;
   let deleted = 0;
 
-  for (let i = 0; i < ids.length; i += BATCH) {
+  for (let i = 0; i < userIds.length; i += BATCH) {
     const responses = http.batch(
-      ids
+      userIds
         .slice(i, i + BATCH)
         .map((id) => [
           "DELETE",
@@ -160,8 +183,9 @@ export function teardown() {
           { timeout: "120s" },
         ]),
     );
+
     deleted += responses.filter((r) => r.status === 200).length;
   }
 
-  console.log(`Teardown removed ${deleted}/${ids.length} users`);
+  console.log(`Teardown removed ${deleted}/${userIds.length} users`);
 }

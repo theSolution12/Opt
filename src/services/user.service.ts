@@ -15,6 +15,11 @@ export interface UpdateUserPayload {
   email: string | null;
 }
 
+export interface GetUserPayload {
+  index: number;
+  pageSize: number;
+}
+
 let nextId = 1;
 export let users: User[] = [];
 
@@ -29,7 +34,7 @@ export const addUser = (payload: AddUserPayload) => {
 
   return {
     success: true,
-    message: "User creupdatedated",
+    message: "User created",
     user,
   };
 };
@@ -64,5 +69,21 @@ export const updateUser = (payload: UpdateUserPayload) => {
     success: true,
     message: "User updated",
     user,
+  };
+};
+
+export const getUsers = (payload: GetUserPayload) => {
+  const { index, pageSize } = payload;
+
+  const startIndex = index * pageSize;
+  const endIndex =
+    startIndex + pageSize > users.length ? users.length : startIndex + pageSize;
+
+  const paginatedUsers = users.slice(startIndex, endIndex);
+
+  return {
+    success: true,
+    message: "Users retrieved",
+    users: paginatedUsers,
   };
 };

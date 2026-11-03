@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
 import {
   addUser,
+  getUsers,
   removeUser,
   updateUser,
-  users,
 } from "../services/user.service";
 
 export const addUserController = (req: Request, res: Response) => {
@@ -57,8 +57,16 @@ export const updateUserController = (req: Request, res: Response) => {
 };
 
 export const getUsersController = (req: Request, res: Response) => {
-  return res.status(200).json({
-    success: true,
-    users: users,
-  });
+  const { index, pageSize } = req.query;
+
+  if (index == null || pageSize == null) {
+    return res.status(400).json({
+      success: false,
+      message: "Index and pageSize are required",
+    });
+  }
+
+  const result = getUsers({ index: Number(index), pageSize: Number(pageSize) });
+
+  return res.status(200).json(result);
 };
