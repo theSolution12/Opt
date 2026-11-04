@@ -40,7 +40,16 @@ export const addUser = (payload: AddUserPayload) => {
 };
 
 export const removeUser = (id: number) => {
-  const newUsers = users.splice(
+  const userIndex = users.findIndex((user) => user.id == id);
+
+  if (userIndex === -1) {
+    return {
+      success: false,
+      message: "User not found",
+    };
+  }
+
+  users.splice(
     users.findIndex((user) => user.id == id),
     1,
   );
